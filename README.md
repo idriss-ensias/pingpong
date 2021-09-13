@@ -1,5 +1,6 @@
 # Multiplayer customizable pong arcade game website using websockets
 ## this game uses : python 3, django, django-channels, django-rest-framework, docker redis container listening on port 6379 
+## start the django instance and go to http://<IP>:<PORT>/accounts/login
 ### Login Page
 ![alt text](https://github.com/idriss-ensias/pingpong/blob/main/images/mpp_login.PNG)
 ### Subscribtion Page
