@@ -7,12 +7,14 @@
 ![alt text](https://github.com/idriss-ensias/pingpong/blob/main/images/mpp_subscribe.PNG) 
 ### Main Page 
 #### This is the main page where you can  : 
-* view your stats (wins, losses, score, ...) 
-* start a new default game
-* start a new customized game
+* View your stats (wins, losses, score, ...) 
+* Start a new default game
+* Start a new customized game
 * Adhere to a started game
 * Play solo a brick breaker game
 * invite another player for a game 
+* Chat with other players
+
 ![alt text](https://github.com/idriss-ensias/pingpong/blob/main/images/mpp_main.PNG)
 ### Customizing Page
 #### On this page you can change :
