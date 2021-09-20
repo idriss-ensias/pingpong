@@ -1,0 +1,167 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Pong : Login</title>
+        <style>
+            canvas {
+                border: 1px solid white;
+                background-color: #000000;
+            }
+        </style>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    </head>
+    <body onload="startAnim()"> 
+      <div class="row">
+        <div class="col" id="headeranim" >
+            <script>
+                var ANIMATION_WIDTH = document.body.clientWidth;
+                var ANIMATION_HEIGHT = 100;
+                var BALL_RADIUS = 8;
+                var COLORS = ["blue","red","white","green","yellow","orange","pink","#0dff31","#ff66ff","#66f2ff","#fffc4d","#3b93ff","#ff3b62","#ff963b","#3bffa0","#677deb","#b997f0"];
+                balls = [];
+                function startAnim() {
+                    title_text = new titletext(550,60,"Arial",50,"white","black",6);
+                    for (let i=0; i<COLORS.length; i++){
+                        adapterx = 0;
+                        adaptery = 0;
+                        xroll = Math.floor(Math.random() * 100);
+                        yroll = Math.floor(Math.random() * 100);
+                        if (xroll % 2 === 0) {
+                            adapterx = 1;
+                        } else {
+                            adapterx = -1;
+                        }
+                        if (yroll % 2 === 0) {
+                            adaptery = 1;
+                        } else {
+                            adaptery = -1;
+                        }
+                        balls.push(new ball(ANIMATION_WIDTH/2,ANIMATION_HEIGHT/2,BALL_RADIUS,COLORS[i],adapterx*(Math.floor(Math.random() * 20) + 10),adaptery*(Math.floor(Math.random() * 20) + 10)));
+                    }
+                    myGameArea.start();
+                }
+                var myGameArea = { 
+                    canvas : document.createElement("canvas"),
+                    start : function(){
+                        this.canvas.width = ANIMATION_WIDTH;
+                        this.canvas.height = ANIMATION_HEIGHT;
+                        this.context = this.canvas.getContext("2d");
+                        document.getElementById("headeranim").appendChild(this.canvas);
+                        this.interval = setInterval(updateGameArea, 50);
+                    },
+                    clear : function() {
+                        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    }
+                }
+                function ball(x,y,radius,color,speedx,speedy){
+                    this.x = x;
+                    this.y = y;
+                    this.radius = radius;
+                    this.color = color;
+                    this.speedx = speedx;
+                    this.speedy = speedy;
+                    this.update = function () {
+                        ctx = myGameArea.context;
+                        if (this.x + this.speedx > this.radius) {
+                            if (this.x + this.speedx < ANIMATION_WIDTH - this.radius) {
+                                this.x += this.speedx;
+                                if (this.y + this.speedy > this.radius) {
+                                    if (this.y + this.speedy < ANIMATION_HEIGHT - this.radius) {
+                                        this.y += this.speedy;
+                                    } else {
+                                        this.y = ANIMATION_HEIGHT - this.radius;
+                                        this.speedy *= -1;
+                                    }
+                                } else {
+                                    this.y = this.radius;
+                                    this.speedy *= -1;
+                                }
+                            } else {
+                                this.x = ANIMATION_WIDTH - this.radius;
+                                this.speedx *= -1;
+                            }
+                        } else {
+                            this.x = this.radius;
+                            this.speedx *= -1;
+                        }
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(this.x,this.y,this.radius,0,2*Math.PI,true);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                }
+                function titletext(x,y,font,size,coloro,colort,blinkspeed){
+                    this.x = x;
+                    this.y = y;
+                    this.font = font;
+                    this.size = size;
+                    this.coloro = coloro;
+                    this.colort = colort;
+                    this.blinkspeed = blinkspeed;
+                    this.blink = 0;
+                    this.update = function () {
+                        ctx = myGameArea.context;
+                        ctx.font = this.size.toString()+"px "+this.font;
+                        if (this.blink < 2*this.blinkspeed){
+                            this.blink += 1;
+                            if (this.blink < this.blinkspeed){
+                                ctx.fillStyle = coloro;
+                            } else {
+                                ctx.fillStyle = colort;
+                            }
+                        } else {
+                            this.blink = 0;
+                        }
+                        ctx.fillText("Mediocre Ping Pong",this.x,this.y);
+                    }
+                }
+                function updateGameArea() {
+                    myGameArea.clear();
+                    title_text.update();
+                    for (let j=0; j<balls.length; j++){
+                        balls[j].update();
+                    }     
+                }
+            </script>
+        </div>
+    </div>
+      <div class="row">
+        <div class="col"></div>
+        <div class="col"></br></br></br>
+          <a class="btn btn-dark" style="width:100% !important;"><strong>Login</strong></a></br>
+          {% if form.errors %}
+          <p>Your username and password didn't match. Please try again.</p>
+          {% endif %}
+          {% if next %}
+          {% if user.is_authenticated %}
+          <p>Your account doesn't have access to this page. To proceed,
+          please login with an account that has access.</p>
+          {% else %}
+          <p>Please login to see this page.</p>
+          {% endif %}
+          {% endif %}
+          <form method="post" class="form-control" action="{% url 'login' %}">
+          {% csrf_token %}
+            <table class="table table-hover">
+              <tr>
+                <td>{{ form.username.label_tag }}</td>
+                <td>{{ form.username }}</td>
+              </tr>
+              <tr>
+                <td>{{ form.password.label_tag }}</td>
+                <td>{{ form.password }}</td>
+              </tr>
+            </table>
+            <input class="btn btn-success" style="width:100% !important;"  type="submit" value="Sign in" />
+            <input type="hidden" name="next" value="{{ next }}" />
+          </form>
+        <a class="btn btn-danger" style="width:100% !important;" href="/yggip/inscription">Sign up</a>
+        </div>
+        <div class="col"></div>
+      </div>
+    </body>
+  </html>
