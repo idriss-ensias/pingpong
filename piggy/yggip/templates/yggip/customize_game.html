@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Pong : {{ player.userplayer.username }}</title>
+        <style>
+            canvas {
+                border: 1px solid white;
+                background-color: #000000;
+            }
+        </style>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    </head>
+    <body onload="startAnim()">
+        <div class="row">
+            <div class="col" id="headeranim" >
+                <script>
+                    var game = {
+                        "inputgamecanvasheight" : 600,
+                        "inputgamecanvaswidth" : 700,
+                        "inputboardwidth" : 100,
+                        "inputboardheight" : 10,
+                        "inputballradius" : 10,
+                        "inputgamecolor" : "white",
+                        "inputtextcolor" : "green",
+                        "inputbackgroundcolor" : "black",
+                        "inputgamefont" : "Arial",
+                        "inputgamedividerwidth" : 1,
+                        "inputusernamesize" : 50,
+                        "inputscoresize" : 50,
+                        "inputtimesize" : 20,
+                        "inputturnlimitwidth" : 4,
+                        "inputtimelimitwidth" : 4,
+                        "inputspeedboost" : 5,
+                        "inputtimelimit" : 1,
+                        "inputboardtime" : 20,
+                        "inputturntime" : 100,
+                        "inputstartkey" : 32,
+                        "inputrightkey" : 39,
+                        "inputleftkey" : 37,
+                        "inputbasespeed" : 6,
+                        "inputturnradius" : 20,
+                        "inputtimeradius" : 40,
+                        "inputboardposition" : 30,
+                        "inputboardspeed" : 10
+                    };
+                    function populateDefaults(){
+                        if (document.getElementById("defaultButton").innerHTML === "Get Default Values"){
+                            for (var key of Object.keys(game)){
+                                document.getElementById(key).value = game[key];
+                            }
+                            document.getElementById("defaultButton").setAttribute("class","btn btn-primary");
+                            document.getElementById("defaultButton").innerHTML = "Clear";
+                        } else {
+                            for (var key of Object.keys(game)){
+                                document.getElementById(key).value = "";
+                            }
+                            document.getElementById("defaultButton").setAttribute("class","btn btn-danger");
+                            document.getElementById("defaultButton").innerHTML = "Get Default Values";
+                        }
+                    }
+                    function sendSpecs(){
+                        var specs = { 
+                            "color" : document.getElementById("inputbackgroundcolor").value, 
+                            "canvasheight" : document.getElementById("inputgamecanvasheight").value, 
+                            "canvaswidth" : document.getElementById("inputgamecanvaswidth").value, 
+                            "boardwidth" : document.getElementById("inputboardwidth").value, 
+                            "boardheight" : document.getElementById("inputboardheight").value, 
+                            "boardposition" : document.getElementById("inputboardposition").value, 
+                            "boardspeed" : document.getElementById("inputboardspeed").value, 
+                            "boardrightkey" : document.getElementById("inputrightkey").value, 
+                            "boardleftkey" : document.getElementById("inputleftkey").value, 
+                            "gamecolor" : document.getElementById("inputgamecolor").value, 
+                            "dividergradient" : document.getElementById("inputgamedividerwidth").value, 
+                            "textcolor" : document.getElementById("inputtextcolor").value, 
+                            "basespeed" : document.getElementById("inputbasespeed").value, 
+                            "speedboost" : document.getElementById("inputspeedboost").value, 
+                            "timelimit" : document.getElementById("inputtimelimit").value, 
+                            "ballradius" : document.getElementById("inputballradius").value, 
+                            "startballkey" : document.getElementById("inputstartkey").value, 
+                            "usernamesize" : document.getElementById("inputusernamesize").value, 
+                            "scoresize" : document.getElementById("inputscoresize").value, 
+                            "timesize" : document.getElementById("inputtimesize").value, 
+                            "turnlimitwidth" : document.getElementById("inputturnlimitwidth").value, 
+                            "timelimitwidth" : document.getElementById("inputtimelimitwidth").value, 
+                            "font" : document.getElementById("inputgamefont").value, 
+                            "turnradius" : document.getElementById("inputturnradius").value, 
+                            "timeradius" : document.getElementById("inputtimeradius").value, 
+                            "boardtime" : document.getElementById("inputboardtime").value, 
+                            "turntime" :  document.getElementById("inputturntime").value 
+                        }
+                        customreq = new XMLHttpRequest()
+                        customreq.onreadystatechange = function () {
+		                    if (this.readyState == 4 && this.status == 200) {
+                                console.log(this.responseText);
+                                kiko = JSON.parse(this.responseText);
+                                window.location.replace("/yggip/pigpog/"+kiko["id"].toString());
+                            }
+                        }
+                        customreq.open("POST","/yggip/custom/{{ player.id }}");
+                        customreq.send(JSON.stringify(specs));
+                    }
+                    var ANIMATION_WIDTH = document.body.clientWidth;
+                    var ANIMATION_HEIGHT = 100;
+                    var BALL_RADIUS = 8;
+                    var COLORS = ["blue","red","white","green","yellow","orange","pink","#0dff31","#ff66ff","#66f2ff","#fffc4d","#3b93ff","#ff3b62","#ff963b","#3bffa0","#677deb","#b997f0"];
+                    balls = [];
+                    function startAnim() {
+                        title_text = new titletext(550,60,"Arial",50,"white","black",6);
+                        for (let i=0; i<COLORS.length; i++){
+                            adapterx = 0;
+                            adaptery = 0;
+                            xroll = Math.floor(Math.random() * 100);
+                            yroll = Math.floor(Math.random() * 100);
+                            if (xroll % 2 === 0) {
+                                adapterx = 1;
+                            } else {
+                                adapterx = -1;
+                            }
+                            if (yroll % 2 === 0) {
+                                adaptery = 1;
+                            } else {
+                                adaptery = -1;
+                            }
+                            balls.push(new ball(ANIMATION_WIDTH/2,ANIMATION_HEIGHT/2,BALL_RADIUS,COLORS[i],adapterx*(Math.floor(Math.random() * 20) + 10),adaptery*(Math.floor(Math.random() * 20) + 10)));
+                        }
+                        myGameArea.start();
+                    }
+                    var myGameArea = { 
+                        canvas : document.createElement("canvas"),
+                        start : function(){
+                            this.canvas.width = ANIMATION_WIDTH;
+                            this.canvas.height = ANIMATION_HEIGHT;
+                            this.context = this.canvas.getContext("2d");
+                            document.getElementById("headeranim").appendChild(this.canvas);
+                            this.interval = setInterval(updateGameArea, 50);
+                        },
+                        clear : function() {
+                            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                        }
+                    }
+                    function ball(x,y,radius,color,speedx,speedy){
+                        this.x = x;
+                        this.y = y;
+                        this.radius = radius;
+                        this.color = color;
+                        this.speedx = speedx;
+                        this.speedy = speedy;
+                        this.update = function () {
+                            ctx = myGameArea.context;
+                            if (this.x + this.speedx > this.radius) {
+                                if (this.x + this.speedx < ANIMATION_WIDTH - this.radius) {
+                                    this.x += this.speedx;
+                                    if (this.y + this.speedy > this.radius) {
+                                        if (this.y + this.speedy < ANIMATION_HEIGHT - this.radius) {
+                                            this.y += this.speedy;
+                                        } else {
+                                            this.y = ANIMATION_HEIGHT - this.radius;
+                                            this.speedy *= -1;
+                                        }
+                                    } else {
+                                        this.y = this.radius;
+                                        this.speedy *= -1;
+                                    }
+                                } else {
+                                    this.x = ANIMATION_WIDTH - this.radius;
+                                    this.speedx *= -1;
+                                }
+                            } else {
+                                this.x = this.radius;
+                                this.speedx *= -1;
+                            }
+                            ctx.fillStyle = this.color;
+                            ctx.beginPath();
+                            ctx.arc(this.x,this.y,this.radius,0,2*Math.PI,true);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                    }
+                    function titletext(x,y,font,size,coloro,colort,blinkspeed){
+                        this.x = x;
+                        this.y = y;
+                        this.font = font;
+                        this.size = size;
+                        this.coloro = coloro;
+                        this.colort = colort;
+                        this.blinkspeed = blinkspeed;
+                        this.blink = 0;
+                        this.update = function () {
+                            ctx = myGameArea.context;
+                            ctx.font = this.size.toString()+"px "+this.font;
+                            if (this.blink < 2*this.blinkspeed){
+                                this.blink += 1;
+                                if (this.blink < this.blinkspeed){
+                                    ctx.fillStyle = coloro;
+                                } else {
+                                    ctx.fillStyle = colort;
+                                }
+                            } else {
+                                this.blink = 0;
+                            }
+                            ctx.fillText("Mediocre Ping Pong",this.x,this.y);
+                        }
+                    }
+                    function updateGameArea() {
+                        myGameArea.clear();
+                        title_text.update();
+                        for (let j=0; j<balls.length; j++){
+                            balls[j].update();
+                        }     
+                    }
+                </script>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <a class="btn btn-dark" style="width:100% !important;"><strong>Game Disposition</strong></a>
+                <table class="table table-hover">
+                    <tr>
+                        <td>Game Canvas Height</td>
+                        <td><input class="form-control" id="inputgamecanvasheight" placeholder="Game Canvas Height"></td>
+                    </tr>
+                    <tr>
+                        <td>Game Canvas Width</td>
+                        <td><input class="form-control" id="inputgamecanvaswidth" placeholder="Game Canvas Width"></td>
+                    </tr>
+                    <tr>
+                        <td>Board Width</td>
+                        <td><input class="form-control" id="inputboardwidth" placeholder="Board Width"></td>
+                    </tr>
+                    <tr>
+                        <td>Board Height</td>
+                        <td><input class="form-control" id="inputboardheight" placeholder="Board Height"></td>
+                    </tr>
+                    <tr>
+                        <td>Ball Radius</td>
+                        <td><input class="form-control" id="inputballradius" placeholder="Ball Radius"></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col">
+                <a class="btn btn-dark" style="width:100% !important;"><strong>Game Color</strong></a>
+                <table class="table table-hover">
+                    <tr>
+                        <td>Game Color</td>
+                        <td><input class="form-control" id="inputgamecolor" placeholder="Game Color"></td>
+                    </tr>
+                    <tr>
+                        <td>Text Color</td>
+                        <td><input class="form-control" id="inputtextcolor" placeholder="Text Color"></td>
+                    </tr>
+                    <tr>
+                        <td>Background Color</td>
+                        <td><input class="form-control" id="inputbackgroundcolor" placeholder="Background Color"></td>
+                    </tr>
+                    <tr>
+                        <td>Game Font</td>
+                        <td><input class="form-control" id="inputgamefont" placeholder="Game Font"></td>
+                    </tr>
+                    <tr>
+                        <td>Game Divider Width</td>
+                        <td><input class="form-control" id="inputgamedividerwidth" placeholder="Game Divider Width"></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col">
+                <a class="btn btn-dark" style="width:100% !important;"><strong>Game Sizes</strong></a>
+                <table class="table table-hover">
+                    <tr>
+                        <td>Username Size</td>
+                        <td><input class="form-control" id="inputusernamesize" placeholder="Username Size"></td>
+                    </tr>
+                    <tr>
+                        <td>Score Size</td>
+                        <td><input class="form-control" id="inputscoresize" placeholder="Score Size"></td>
+                    </tr>
+                    <tr>
+                        <td>Time Size</td>
+                        <td><input class="form-control" id="inputtimesize" placeholder="Time Size"></td>
+                    </tr>
+                    <tr>
+                        <td>Turn Limit Width</td>
+                        <td><input class="form-control" id="inputturnlimitwidth" placeholder="Turn Limit Width"></td>
+                    </tr>
+                    <tr>
+                        <td>Time Limit Width</td>
+                        <td><input class="form-control" id="inputtimelimitwidth" placeholder="Time Limit Width"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <a class="btn btn-dark" style="width:100% !important;"><strong>Game Speeds and Times</strong></a>
+                <table class="table table-hover">
+                    <tr>
+                        <td>Speed Boost</td>
+                        <td><input class="form-control" id="inputspeedboost" placeholder="Speed Boost"></td>
+                    </tr>
+                    <tr>
+                        <td>Time Limit</td>
+                        <td><input class="form-control" id="inputtimelimit" placeholder="Time Limit"></td>
+                    </tr>
+                    <tr>
+                        <td>Board Time</td>
+                        <td><input class="form-control" id="inputboardtime" placeholder="Board Time"></td>
+                    </tr>
+                    <tr>
+                        <td>Turn Time</td>
+                        <td><input class="form-control" id="inputturntime" placeholder="Turn Time"></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col">
+                <a class="btn btn-dark" style="width:100% !important;"><strong>Game Keys</strong></a>
+                <table class="table table-hover">
+                    <tr>
+                        <td>Start Key</td>
+                        <td><input class="form-control" id="inputstartkey" placeholder="Start Key"></td>
+                    </tr>
+                    <tr>
+                        <td>Right Key</td>
+                        <td><input class="form-control" id="inputrightkey" placeholder="Right Key"></td>
+                    </tr>
+                    <tr>
+                        <td>Left Key</td>
+                        <td><input class="form-control" id="inputleftkey" placeholder="Left Key"></td>
+                    </tr>
+                    <tr>
+                        <td>Base Speed</td>
+                        <td><input class="form-control" id="inputbasespeed" placeholder="Base Speed"></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col">
+                <a class="btn btn-dark" style="width:100% !important;"><strong>Others</strong></a>
+                <table class="table table-hover">
+                    <tr>
+                        <td>Turn Radius</td>
+                        <td><input class="form-control" id="inputturnradius" placeholder="Turn Radius"></td>
+                    </tr>
+                    <tr>
+                        <td>Time Radius</td>
+                        <td><input class="form-control" id="inputtimeradius" placeholder="Time Radius"></td>
+                    </tr>
+                    <tr>
+                        <td>Board Position</td>
+                        <td><input class="form-control" id="inputboardposition" placeholder="Board Position"></td>
+                    </tr>
+                    <tr>
+                        <td>Board Speed</td>
+                        <td><input class="form-control" id="inputboardspeed" placeholder="Board Speed"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <a style="width:100% !important;" class="btn btn-danger" id="defaultButton" onclick="populateDefaults()">Get Default Values</a>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <a style="width:100% !important;" class="btn btn-success" onclick="sendSpecs()">Start Customized Game</a>
+            </div>
+        </div>
+    </body>
+</html>

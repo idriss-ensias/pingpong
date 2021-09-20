@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <style>
+            html, body {
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+            canvas {
+                border: 1px solid white;
+                background-color: {{ game.color }};
+            }
+        </style>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    </head>
+    <body onload="startGame()">
+        <div class="row">
+            <div class="col"><a class="btn btn-success" style="width:100% !important;" href="/yggip/mediocrepingpong/{{ player.id }}"><strong>Go back</strong></a></div>
+        </div>
+        <div class="row">
+        <div class="col"></div>
+        <div class="col" id="brap">
+        <script>
+            function speedcoro(base,boost){
+                let global_speed = [];
+                let left = [];
+                let right = [];
+                let left_add = [];
+                let right_add = []; 
+                for (let i=1; i<base; i++){
+                    left_add = [i-base-boost,-1*i-boost];
+                    left.push(left_add);
+                    right_add = [i+boost,i-base-boost];
+                    right.push(right_add);
+                }
+                global_speed = left.concat(right);
+                return global_speed;
+            }
+            var CANVAS_HEIGHT = parseInt("{{ game.canvasheight }}");
+            var CANVAS_WIDTH = parseInt("{{ game.canvaswidth }}");
+            var BOARD_WIDTH = parseInt("{{ game.boardwidth }}");
+            var BOARD_HEIGHT = parseInt("{{ game.boardheight }}");
+            var BOARD_POSITION = parseInt("{{ game.boardposition }}");
+            var BOARD_SPEED = parseInt("{{ game.boardspeed }}");
+            var BASE_SPEED = parseInt("{{ game.basespeed }}");
+            var SPEED_BOOST = parseInt("{{ game.speedboost }}");
+            var SPEEDS = speedcoro(BASE_SPEED,SPEED_BOOST);
+            var BOARD_RIGHT_KEY = parseInt("{{ game.boardrightkey }}");
+            var BOARD_LEFT_KEY = parseInt("{{ game.boardleftkey }}");
+            var GAME_COLOR = "{{ game.gamecolor }}";
+            var DIVIDER_GRADIENT = parseInt("{{ game.dividergradient }}");
+            var TEXT_COLOR = "{{ game.textcolor }}";
+            var TIME_LIMIT = parseInt("{{ game.timelimit }}");
+            var BALL_RADIUS = parseInt("{{ game.ballradius }}");
+            var START_BALL_KEY = parseInt("{{ game.startballkey }}");
+            var SCORE_SIZE = parseInt("{{ game.scoresize }}");
+            var USERNAME_SIZE = parseInt("{{ game.usernamesize }}");
+            var TIME_SIZE = parseInt("{{ game.timesize }}");
+            var TURN_LIMIT_WIDTH = parseInt("{{ game.turnlimitwidth }}");
+            var TIME_LIMIT_WIDTH = parseInt("{{ game.timelimitwidth }}");
+            var FONT = "{{ game.font }}";
+            var TURN_RADIUS = parseInt("{{ game.turnradius }}");
+            var TIME_RADIUS = parseInt("{{ game.timeradius }}");
+            var BOARD_TIME = parseInt("{{ game.boardtime }}");
+            var TURN_TIME = parseInt("{{ game.turntime }}");;
+            var playerid = "{{ player.id }}";
+            var playername = "{{ player.userplayer.username }}";
+            var playerscore = 0;
+            var opponentid = 0;
+            var opponentscore = 0;
+            var game_start = 0;
+            var game_end = 0;
+            var gameid = "{{ game.id }}";
+            var time_min = 0;
+            var time_sec = 0;
+            var ball_up = 0;
+            var anim_board = 0;
+            var opanim_board = 0
+            var ballat = 0;
+            var opponentok = 0;
+            var playtimelimit = 100;
+            var oplaytimelimit = 0;
+            const chatSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/skirt/'
+            + gameid
+            + '/'
+            );
+            const GameSocket = new WebSocket('ws://'+ window.location.host + '/ws/yggip/pong/{{ player.id }}/2/');
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                mess = data.message.split(',');
+                if(mess[0] === "0"){
+                    if (mess[1] === playerid) {
+                        opponentid = mess[3];
+                        opponentname = mess[4];
+                    } else {
+                        opponentid = mess[1];
+                        opponentname = mess[2];
+                    }
+                    game_start = 1;
+                    chatSocket.send(JSON.stringify({
+                        'message': '3,{{ player.id }},'+player_board.x.toString()
+                    }));
+                    setInterval(timio,1000);
+                    GameSocket.send(JSON.stringify({
+                        'message': '27,{{ player.id }},'+opponentid.toString()
+                    }));
+                }
+                if(mess[0] === "1"){
+                    game_end = 1;
+                    if (time_min < TIME_LIMIT){
+                        mekka.width = 470;
+                    }
+                    if (time_min < TIME_LIMIT) {
+                        chatSocket.send(JSON.stringify({
+                            'message': '2,{{ player.id }},{{ game.id }}'
+                        }));
+                    }
+                }
+                if (mess[0] === "3") {
+                    if (mess[1] === opponentid.toString()){
+                        opponent_board.x = mess[2]; 
+                    }
+                }
+                if (mess[0] === "4") {
+                    ball_up = 1;
+                }
+                if (mess[0] === "5") {
+                    if (mess[1] === opponentid) {
+                        opanim_board = 20;
+                        bb.x = parseInt(mess[2]);
+                        bb.y = CANVAS_HEIGHT - parseInt(mess[3]);
+                        bb.speedx = parseInt(mess[4]);
+                        bb.speedy = -1*parseInt(mess[5]);
+                    }
+                }
+                if (mess[0] === "6") {
+                    if (bb.y > BOARD_POSITION) {
+                        if (bb.y < CANVAS_HEIGHT - BOARD_POSITION) {
+                            if (mess[1] === opponentid) {
+                                upordown = bb.speedy/Math.abs(bb.speedy);
+                                if (upordown === -1) {
+                                    bb.x = parseInt(mess[2]);
+                                    bb.y = CANVAS_HEIGHT - parseInt(mess[3]);
+                                } else {
+                                    bb.x = parseInt(mess[2]);
+                                    bb.y = CANVAS_HEIGHT - parseInt(mess[3]);
+                                }
+                            }
+                        }
+                    }
+                }
+                if (mess[0] === "7") {
+                    if (parseInt(mess[1]) === opponentid) {
+                        if (opponentscore < parseInt(mess[2])){
+                            opponentscore = parseInt(mess[2]);
+                        }
+                        if (playerscore < parseInt(mess[3])){
+                            playerscore = parseInt(mess[3]);
+                        }
+                    } 
+                }
+                if (mess[0] === "12") {
+                    if (turn === 0) {
+                        bbo.x = parseInt(mess[1]);
+                        bbo.y = CANVAS_HEIGHT -  parseInt(mess[2]);
+                    }
+                }
+                if (mess[0] === "13") {
+                    if (turn === 1) {
+                        opponentok = 0;
+                        oplaytimelimit = 0;
+                    }
+                }
+                if (mess[0] === "14") {
+                    if (turn === 0) {
+                        playerscore = parseInt(mess[5]);
+                        opponentscore = parseInt(mess[4]);
+                    }
+                }
+                if (mess[0] === "15"){
+                    if (turn === 0 ) {
+                        anim_board = BOARD_TIME;
+                    }
+                }
+                if (mess[0] === "16"){
+                    if (turn === 0 ) {
+                        opanim_board = BOARD_TIME;
+                    }
+                }
+                if (mess[0] === "17"){
+                    oplaytimelimit = TURN_TIME;
+                }
+            }
+            {% if opponent %}
+                var opponentname = "{{ opponent.userplayer.username }}";
+                var turn = 0;
+            {% else %}
+                var opponentname = "NaN";
+                var turn = 1;
+            {% endif %}
+            function startGame(){ 
+                mekka = new messo(GAME_COLOR,FONT,"{{ game.color }}",140,180,410,100,10);
+                glx = new galaxy(30);
+                player_board = new playerboard(CANVAS_WIDTH/2-BOARD_WIDTH/2,CANVAS_HEIGHT-BOARD_POSITION,BOARD_WIDTH,BOARD_HEIGHT,GAME_COLOR,BOARD_SPEED,TEXT_COLOR,BOARD_LEFT_KEY,BOARD_RIGHT_KEY,START_BALL_KEY);
+                opponent_board = new opponentboard(CANVAS_WIDTH/2-BOARD_WIDTH/2,BOARD_POSITION,BOARD_WIDTH,BOARD_HEIGHT,GAME_COLOR,TEXT_COLOR);
+                if (turn === 0) {
+                    player_board.y -= BOARD_HEIGHT;
+                    opponent_board.y -= BOARD_HEIGHT;
+                }
+                game_stats = new gamestats(GAME_COLOR,TEXT_COLOR,DIVIDER_GRADIENT,BASE_SPEED,SPEED_BOOST,TIME_LIMIT,SCORE_SIZE,USERNAME_SIZE,TIME_SIZE,TURN_LIMIT_WIDTH,TIME_LIMIT_WIDTH,FONT,TURN_RADIUS,TIME_RADIUS,TURN_TIME,player_board);
+                if (turn === 1) {
+                    bb = new theball(BALL_RADIUS,SPEEDS,player_board,opponent_board,BOARD_TIME,TURN_TIME,GAME_COLOR);
+                    game_stats.ball = bb;
+                } else {
+                    bbo = new shadowball(BALL_RADIUS,GAME_COLOR);
+                    game_stats.ball = bbo;
+                }
+                myGameArea.start();
+            }
+            var myGameArea = { 
+            canvas : document.createElement("canvas"),
+            start : function(){
+                this.canvas.width = CANVAS_WIDTH;
+                this.canvas.height = CANVAS_HEIGHT;
+                this.context = this.canvas.getContext("2d");
+                document.getElementById("brap").appendChild(this.canvas);
+                this.interval = setInterval(updateGameArea, 50);
+                window.addEventListener('keydown', function (e) {
+                myGameArea.keys = (myGameArea.keys || []);
+                myGameArea.keys[e.keyCode] = (e.type == "keydown");
+                })
+                window.addEventListener('keyup', function (e) {
+                    myGameArea.keys[e.keyCode] = (e.type == "keydown");
+                })
+            },
+            clear : function() {
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
+        function timio(){
+            if(game_end === 0) {
+                if (time_min < TIME_LIMIT){
+                    if(time_sec === 59){
+                        time_min = (time_min+1)%60
+                        if(time_min === TIME_LIMIT){
+                            game_end = 1;
+                            mekka.width = 130;
+                            chatSocket.send(JSON.stringify({
+                            'message': '8'
+                            }));
+                        }
+                    }
+                    time_sec = (time_sec+1)%60
+                }
+            }
+        }
+        function opponentboard(x,y,width,height,color,othercolor){
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.color = color;
+            this.othercolor = othercolor;
+            this.update = function() {
+                ctx = myGameArea.context;
+                if (opanim_board > 0) {
+                    ctx.fillStyle = this.othercolor;
+                    opanim_board-- ;
+                } else {
+                    ctx.fillStyle = this.color;
+                }
+                ctx.fillRect(this.x,this.y,this.width,this.height);
+            }
+        }
+        function playerboard(x,y,width,height,color,speed,othercolor,boardleftkey,boardrightkey,startballkey) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.color = color;
+            this.speed = speed;
+            this.othercolor = othercolor;
+            this.boardleftkey = boardleftkey;
+            this.boardrightkey = boardrightkey;
+            this.startballkey = startballkey;
+            this.update = function() {
+                ctx = myGameArea.context;
+                if (myGameArea.keys && myGameArea.keys[this.boardleftkey]) {
+                    if (this.x > 0) {
+                        this.x -= this.speed ;  
+                    } else {
+                        this.x = 0;
+                    }
+                    chatSocket.send(JSON.stringify({
+                        'message': '3,{{ player.id }},'+this.x.toString()
+                    }));
+                }
+                if (myGameArea.keys && myGameArea.keys[this.boardrightkey]) {
+                    if (this.x < ctx.canvas.clientWidth - this.width) {
+                        this.x += this.speed ;  
+                    } else {
+                        this.x = ctx.canvas.clientWidth - this.width;
+                    }
+                    chatSocket.send(JSON.stringify({
+                        'message': '3,{{ player.id }},'+this.x.toString()
+                    }));
+                }
+                if (myGameArea.keys && myGameArea.keys[this.startballkey]) {
+                    chatSocket.send(JSON.stringify({
+                        'message': '4'
+                    }));
+                    ball_up = 1;
+                    playtimelimit = 0;
+                }
+                if (anim_board > 0) {
+                    ctx.fillStyle = this.othercolor;
+                    anim_board-- ;
+                } else {
+                    ctx.fillStyle = this.color;
+                }
+                ctx.fillRect(this.x,this.y,this.width,this.height);    
+            }
+        }
+        function theball(radius,speedlist,board,obaord,boardtime,turntime,color){
+            this.board = board;
+            this.oboard = obaord;
+            this.radius = radius;
+            this.x = this.board.x+this.board.width/2;
+            this.y = this.board.y - this.radius;
+            this.speedlist = speedlist;
+            this.speedx = this.speedlist[Math.floor((this.board.width/2)/(this.board.width/this.speedlist.length))][0];
+            this.speedy = this.speedlist[Math.floor((this.board.width/2)/(this.board.width/this.speedlist.length))][1];
+            this.boardtime = boardtime;
+            this.turntime = turntime;
+            this.color = color;
+            this.update = function() {
+                ctx = myGameArea.context;
+                if (turn === 1 ) {
+                    if (game_start === 1) {
+                        if (game_end === 0) {
+                            if((ball_up === 1)&&(opponentok === 0)){
+                                if (this.x + this.speedx > this.radius) {
+                                    if (this.x+this.speedx < ctx.canvas.clientWidth - this.radius){
+                                        this.x += this.speedx;
+                                        if (this.y+this.speedy > -this.radius) {
+                                            if (this.y+this.speedy < ctx.canvas.clientHeight + this.radius) {
+                                                this.y += this.speedy;
+                                                if ((this.x+this.speedx > this.board.x)&&(this.x+this.speedx < this.board.x + this.board.width)) {
+                                                    if ((this.y + this.speedy > this.board.y - this.radius)&&(this.y+this.speedy < this.board.y + this.radius)){
+                                                        chatSocket.send(JSON.stringify({
+                                                            'message': '16'
+                                                        }));
+                                                        this.y = this.board.y - this.radius;
+                                                        var posresult = Math.floor((this.x + this.speedx - this.board.x)/(board.width/this.speedlist.length));
+                                                        this.speedy = this.speedlist[posresult][1];
+                                                        this.speedx = this.speedlist[posresult][0];
+                                                        anim_board = this.boardtime;
+                                                    }
+                                                }
+                                                if ((parseInt(this.x)+parseInt(this.speedx) > parseInt(this.oboard.x))&&(parseInt(this.x)+parseInt(this.speedx) < parseInt(this.oboard.x) + parseInt(this.oboard.width))) {
+                                                    if ((this.y + this.speedy > this.oboard.y - this.radius)&&(this.y+this.speedy < this.oboard.y + this.radius)){
+                                                        chatSocket.send(JSON.stringify({
+                                                            'message': '15'
+                                                        }));
+                                                        this.y = this.oboard.y + this.radius + this.oboard.height;
+                                                        var posresult = Math.floor((this.x + this.speedx - this.oboard.x)/(this.oboard.width/this.speedlist.length));
+                                                        this.speedy = -1*this.speedlist[posresult][1];
+                                                        this.speedx = this.speedlist[posresult][0];
+                                                        opanim_board = this.boardtime;
+                                                    }
+                                                }
+                                            } else {
+                                                ballat = 0;
+                                                playtimelimit = this.turntime;
+                                                speedx = this.speedlist[Math.floor((this.board.width/2)/(this.board.width/this.speedlist.length))][0];
+                                                speedy = this.speedlist[Math.floor((this.board.width/2)/(this.board.width/this.speedlist.length))][1];
+                                                this.speedy *= -1;
+                                                ball_up = 0;
+                                                opponentscore++;
+                                                chatSocket.send(JSON.stringify({
+                                                    'message': '14,{{game.id}},{{player.id}},'+opponentid.toString()+','+playerscore.toString()+','+opponentscore.toString()
+                                                }));    
+                                            }
+                                        } else {
+                                            chatSocket.send(JSON.stringify({
+                                                'message': '17'
+                                            }));
+                                            ballat = 1;
+                                            oplaytimelimit = this.turntime;
+                                            speedx = this.speedlist[Math.floor((this.board.width/2)/(this.board.width/this.speedlist.length))][0];
+                                            speedy = this.speedlist[Math.floor((this.board.width/2)/(this.board.width/this.speedlist.length))][1];
+                                            opponentok = 1;
+                                            playerscore++;
+                                            chatSocket.send(JSON.stringify({
+                                                'message': '14,{{game.id}},{{player.id}},'+opponentid.toString()+','+playerscore.toString()+','+opponentscore.toString()
+                                            }));  
+                                        }
+                                    } else {
+                                        this.x = ctx.canvas.clientWidth - this.radius;
+                                        this.speedx *= -1;
+                                    }
+                                } else {
+                                    this.x = this.radius;
+                                    this.speedx *= -1;
+                                }
+                            } else {
+                                if (ballat === 0) {
+                                    this.x = this.board.x + this.board.width/2;
+                                    this.y = this.board.y - this.radius;
+                                    if (playtimelimit === 0) {
+                                        ball_up = 1;
+                                    } else {
+                                        playtimelimit--;
+                                    }
+                                } else {
+                                    this.x = parseInt(this.oboard.x) + parseInt(this.oboard.width/2);
+                                    this.y = parseInt(this.oboard.y) + parseInt(this.radius) + parseInt(this.oboard.height);
+                                    if (oplaytimelimit === 0) {
+                                        opponentok = 0;
+                                    } else {
+                                        oplaytimelimit--;
+                                    }
+                                }
+                            }
+                            chatSocket.send(JSON.stringify({
+                                'message': '12,'+this.x.toString()+','+this.y.toString()
+                            }));
+                            ctx.fillStyle = this.color;
+                            ctx.beginPath();
+                            ctx.arc(this.x,this.y,this.radius,0,2*Math.PI,true);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+        }
+        function shadowball(radius,color){
+            this.x = 0;
+            this.y = 0;
+            this.radius = radius;
+            this.color = color;
+            this.update = function () {
+                if (game_start === 1) {
+                    if (game_end === 0) {
+                        if (oplaytimelimit > 0){
+                            oplaytimelimit--;
+                        }
+                        ctx = myGameArea.context;
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(this.x,this.y,this.radius,0,2*Math.PI,true);
+                        ctx.closePath();
+                        ctx.fill();
+                        if (myGameArea.keys && myGameArea.keys[32]) {
+                            chatSocket.send(JSON.stringify({
+                            'message': '13'
+                            }));
+                            if (turn === 0) {
+                                oplaytimelimit = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        function star(x,y,width) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.small = 0;
+            this.big = 5;
+            this.step = 0.2;
+            this.update = function() {
+                ctx = myGameArea.context;
+                ctx.fillStyle = GAME_COLOR;
+                ctx.fillRect((this.x-this.small),(this.y-this.small),(this.width+this.small),(this.width+this.small));
+                ctx.fillStyle = "{{ game.color }}";
+                ctx.beginPath();
+                ctx.arc((this.x-this.small),(this.y-this.small),9*(this.width+this.small)/20,0,2*Math.PI,true);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc((this.x-this.small)+(this.width+this.small),(this.y-this.small),9*(this.width+this.small)/20,0,2*Math.PI,true);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc((this.x-this.small),(this.y-this.small)+(this.width+this.small),9*(this.width+this.small)/20,0,2*Math.PI,true);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc((this.x-this.small)+(this.width+this.small),(this.y-this.small)+(this.width+this.small),9*(this.width+this.small)/20,0,2*Math.PI,true);
+                ctx.closePath();
+                ctx.fill();
+                if (this.small < this.big) {
+                    this.small += this.step;
+                } else {
+                    this.small = 0;
+                }                       
+            }
+        }
+        function galaxy(numstars) {
+            this.numstars = numstars;
+            this.stars = []
+            this.ctx = myGameArea.context;
+            for (let p=0; p<numstars; p++){
+                this.stars.push(new star(Math.random()*CANVAS_WIDTH,Math.random()*CANVAS_HEIGHT,10))
+                this.stars[p].small= (Math.random()*50)/10;
+            }
+            this.update = function(){
+                for (let y=0; y<this.stars.length; y++){
+                    this.stars[y].update();
+                }
+            }
+        }
+        function gamestats(gamecolor,textcolor,gradient,speed,boost,time,scorefontsize,usernamefontsize,timefontsize,turnwidth,timewidth,font,turnradius,timeradius,turntime,board){
+            this.gamecolor = gamecolor;
+            this.textcolor = textcolor;
+            this.ball = 0;
+            this.gradient = gradient;
+            this.speed = speed;
+            this.boost = boost;
+            this.time = time;
+            this.scorefontsize = scorefontsize;
+            this.usernamefontsize = usernamefontsize;
+            this.timefontsize = timefontsize;
+            this.turnwidth = turnwidth;
+            this.timewidth = timewidth;
+            this.font = font;
+            this.turnradius = turnradius;
+            this.timeradius = timeradius;
+            this.turntime = turntime;
+            this.board = board;
+            this.update = function() {
+                if (game_start === 1) {
+                    if (game_end === 0) {
+                        if (turn === 1) {
+                            ctx = myGameArea.context;
+                            if (playtimelimit > 0){
+                                ctx.strokeStyle = this.textcolor;
+                                ctx.lineWidth = this.turnwidth;
+                                ctx.beginPath();
+                                ctx.arc(board.x+board.width+20,5*ctx.canvas.clientHeight/6,this.turnradius,0,2*Math.PI,true);
+                                ctx.closePath();
+                                ctx.stroke();
+                                ctx.fillStyle = this.gamecolor;
+                                ctx.beginPath();
+                                ctx.arc(board.x+board.width+20,5*ctx.canvas.clientHeight/6,this.turnradius*(this.turntime-playtimelimit)/this.turntime,0,2*Math.PI,true);
+                                ctx.closePath();
+                                ctx.fill();      
+                            }
+                        } else {
+                            if (oplaytimelimit > 0){
+                                ctx.strokeStyle = this.textcolor;
+                                ctx.lineWidth = this.turnwidth;
+                                ctx.beginPath();
+                                ctx.arc(board.x+board.width+20,5*ctx.canvas.clientHeight/6,this.turnradius,0,2*Math.PI,true);
+                                ctx.closePath();
+                                ctx.stroke();
+                                ctx.fillStyle = this.gamecolor;
+                                ctx.beginPath();
+                                ctx.arc(board.x+board.width+20,5*ctx.canvas.clientHeight/6,this.turnradius*(this.turntime-oplaytimelimit)/this.turntime,0,2*Math.PI,true);
+                                ctx.closePath();
+                                ctx.fill();   
+                            }
+                        }
+                        ctx.strokeStyle = this.textcolor;
+                        ctx.beginPath();
+                        ctx.lineWidth = this.timewidth;
+                        perc = (this.time*60 - time_min*60 - time_sec)/(this.time*60)
+                        ctx.arc(ctx.canvas.clientWidth/2,ctx.canvas.clientHeight/2,this.timeradius,0,2*Math.PI,true);
+                        ctx.closePath();
+                        ctx.stroke();
+                        ctx.fillStyle = this.gamecolor;
+                        ctx.beginPath();
+                        ctx.arc(ctx.canvas.clientWidth/2,ctx.canvas.clientHeight/2,this.timeradius*(perc),0,2*Math.PI,true);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.font = this.timefontsize.toString()+"px "+this.font;
+                        time_min_str = time_min.toString();
+                        time_sec_str = time_sec.toString();
+                        if (time_min < 10) {
+                            time_min_str = "0"+time_min_str;
+                        }
+                        if (time_sec < 10) {
+                            time_sec_str = "0"+time_sec_str;
+                        }
+                        ctx.fillStyle = this.textcolor;
+                        ctx.fillText(time_min_str+":"+time_sec_str,ctx.canvas.clientWidth/2-25,ctx.canvas.clientHeight/2-Math.floor(ctx.canvas.clientHeight*this.gradient/100)/2);
+                    }
+                }
+                if ((this.ball.y > ((ctx.canvas.clientHeight/2) - 2*(this.speed+this.boost-1)))&&(this.ball.y < ((ctx.canvas.clientHeight/2) + 2*(this.speed+this.boost-1)))){
+                    ctx.fillStyle = this.textcolor;
+                } else {
+                    ctx.fillStyle = this.gamecolor;
+                }
+                ctx.fillRect(0,ctx.canvas.clientHeight/2-Math.floor(ctx.canvas.clientHeight*this.gradient/100)/2,ctx.canvas.clientWidth,Math.floor(ctx.canvas.clientHeight*this.gradient/100)) 
+                ctx.fillStyle = this.textcolor; 
+                ctx.font = this.scorefontsize.toString()+"px "+this.font;
+                ctx.fillText(playerscore.toString(),(2.2)*ctx.canvas.clientWidth/7,3*ctx.canvas.clientHeight/4+Math.floor(ctx.canvas.clientHeight*this.gradient/100)/4);
+                ctx.font = this.usernamefontsize.toString()+"px "+this.font;
+                ctx.fillText(playername,(4.2)*ctx.canvas.clientWidth/7,3*ctx.canvas.clientHeight/4+Math.floor(ctx.canvas.clientHeight*this.gradient/100)/4-10);
+                ctx.font = this.scorefontsize.toString()+"px "+this.font;
+                ctx.fillText(opponentscore.toString(),(2.2)*ctx.canvas.clientWidth/7,ctx.canvas.clientHeight/4-Math.floor(ctx.canvas.clientHeight*this.gradient/100)/4);
+                ctx.font = this.usernamefontsize.toString()+"px "+this.font;
+                ctx.fillText(opponentname,(4.2)*ctx.canvas.clientWidth/7,ctx.canvas.clientHeight/4+Math.floor(ctx.canvas.clientHeight*this.gradient/100)/4-10);
+            }
+        }
+        function messo(color,font,colort,x,y,width,height,step){
+            this.color = color;
+            this.font = font;
+            this.colort = colort;
+            this.big = 10;
+            this.small = 0;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.step = step;
+            this.update = function() {
+                ctx = myGameArea.context;
+                if(this.small < this.big){
+                    if(this.small<Math.floor(this.big/2)){
+                        this.colort = GAME_COLOR;
+                        this.color = TEXT_COLOR;
+                    } else {
+                        this.color = GAME_COLOR;
+                        this.colort = TEXT_COLOR;
+                    }
+                    this.small++;
+                } else {
+                    this.small = 0;
+                }
+                if (this.x + this.step > 50){
+                    if (this.x + this.step < ctx.canvas.clientWidth - this.width -50){
+                        this.x += this.step
+                    } else {
+                        this.step *= -1;
+                        this.x = ctx.canvas.clientWidth - this.width-50;
+                    }
+                } else {
+                    this.step *= -1;
+                    this.x = 50;
+                }
+                if (game_start === 0) {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x,this.y,50,0,2*Math.PI,true);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillRect(this.x,130,this.width,this.height);
+                    ctx.beginPath();
+                    ctx.arc(this.x+this.width,180,50,0,2*Math.PI,true);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = this.colort;
+                    ctx.font = "50px "+this.font;
+                    ctx.fillText("Waiting for opponnent",this.x-40,200);
+
+                } else {
+                    if (game_end === 1) {
+                        if (time_min === TIME_LIMIT) {
+                            ctx.fillStyle = this.color;
+                            ctx.beginPath();
+                            ctx.arc(this.x,this.y,50,0,2*Math.PI,true);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.fillRect(this.x,130,this.width,this.height);
+                            ctx.beginPath();
+                            ctx.arc(this.x+this.width,this.y,50,0,2*Math.PI,true);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.fillStyle = this.colort;
+                            ctx.font = "50px "+this.font;
+                            ctx.fillText("Time Up",this.x-40,200);
+                        } else {
+                            ctx.fillStyle = this.color;
+                            ctx.beginPath();
+                            ctx.arc(this.x,this.y,50,0,2*Math.PI,true);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.fillRect(this.x,130,this.width,this.height);
+                            ctx.beginPath();
+                            ctx.arc(this.x+this.width,this.y,50,0,2*Math.PI,true);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.fillStyle = this.colort;
+                            ctx.font = "50px "+this.font;
+                            ctx.fillText("Opponnent disconnected",this.x-40,200);
+                        }
+                    }
+                }
+            }
+        }
+        function updateGameArea(){
+            myGameArea.clear();
+            glx.update();
+            if (turn === 1) {
+                bb.update();
+            } else {
+                bbo.update();
+            }
+            player_board.update();
+            opponent_board.update();
+            game_stats.update();
+            mekka.update();
+        }
+        </script>
+        </div>
+        <div class="col"></div>
+    </div>
+    </body>
+</html>

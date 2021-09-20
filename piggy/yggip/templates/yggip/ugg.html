@@ -1,0 +1,371 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Pong : {{ player.userplayer.username }}</title>
+        <style>
+            canvas {
+                border: 1px solid white;
+                background-color: #000000;
+            }
+        </style>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    </head>
+    <body onload="startAnim()"> 
+        <script>
+            var VOYANTS = ["{% static 'yggip/red_butt.jpg' %}","{% static 'yggip/green_butt.jpg' %}","{% static 'yggip/or_butt.jpg' %}","{% static 'yggip/pr_butt.jpg' %}"]
+            function creategame() {
+                newgamereq = new XMLHttpRequest();
+                newgamereq.onreadystatechange = function () {
+		            if (this.readyState == 4 && this.status == 200) {
+                        kiko = JSON.parse(this.responseText);
+                        window.location.replace("/yggip/pigpog/"+kiko["id"].toString());
+                    }
+                }
+                newgamereq.open("GET","/yggip/newgame/{{ player.id }}");
+                newgamereq.send();
+            }
+            function invite(op){
+                chatSocket.send(JSON.stringify({
+                    'message': '100,{{ player.id }},'+op.toString()+",{{ player.userplayer.username }}"
+                }));
+            }
+            const chatSocket = new WebSocket('ws://'+ window.location.host + '/ws/yggip/pong/{{ player.id }}/1/');
+            function segacha() {
+                strotro = document.getElementById("sendchat").value;
+                chatSocket.send(JSON.stringify({
+                    'message': '10,{{ player.userplayer.username }} : '+strotro
+                }));
+                document.getElementById("sendchat").value = "";
+            }
+            function acceptredi(pid){
+                window.location.replace("/yggip/bond/"+pid);
+            }
+            function accept(pid){
+                chatSocket.send(JSON.stringify({
+                    'message': '101,'+pid
+                })); 
+                setTimeout(function() {
+                    acceptredi(pid);
+                }, 4000)
+            }
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                mess = data.message.split(',');
+                if(mess[0] === "10"){
+                    txtarea = document.getElementById("chattext");
+                    txtarea.innerHTML += "<tr><td style='width: 100px !important;'><a class='btn btn-dark' style='width:100% !important;'>"+mess[1].split(":")[0].trim()+"</a></td><td><div style='margin-left:0px !important;'>"+mess[1].split(":")[1]+"</div></td><tr>";
+                }
+                if(mess[0] === "100"){
+                    if (mess[2] === "{{ player.id }}"){
+                        txtarea = document.getElementById("chattext");
+                        txtarea.innerHTML += "<tr><td colspan='100% !important;'><a class='btn btn-success' style='width:100% !important;' onclick='accept("+mess[1]+")' >"+mess[3]+" has invited you for a game, do you accept ?</a></td></tr>";
+                    }
+                }
+                if (mess[0] === "101"){
+                    if (mess[1] === "{{ player.id }}") {
+                        creategame();
+                    }
+                }
+                if (mess[0] === "12"){
+                    sourco = "{% static 'yggip/red_butt.jpg' %}";
+                    piko = ""; 
+                    sino = "";
+                    ziao = "";
+                    if (mess[2] === "0"){
+                        sourco = "{% static 'yggip/red_butt.jpg' %}"; 
+                    } else if (mess[2] === "1") {
+                        sourco = "{% static 'yggip/green_butt.jpg' %}";
+                        piko = "Invite";
+                        sino = "#";
+                        ziao = "invite("+mess[1]+")"
+                    } else if (mess[2] === "2") {
+                        sourco = "{% static 'yggip/or_butt.jpg' %}";
+                        piko = "Adhere";
+                        sino = "/yggip/bond/"+mess[1].toString();
+                    } else if (mess[2] === "3") {
+                        sourco = "{% static 'yggip/pr_butt.jpg' %}";
+                        piko = "Watch";
+                        href = "#";
+                    } 
+                    document.getElementById("state-"+mess[1]).innerHTML = "<img src='"+sourco+"' class='tableimage' style='width: 20px !important; height: 20px !important;'>";
+                    document.getElementById("skate-"+mess[1]).innerHTML = "<a class='btn btn-primary' href='"+sino+"' style='width:100% !important;' onclick='"+ziao+"'>"+piko+"</a>";
+                    if (mess[2] === "0"){
+                        document.getElementById("skate-"+mess[1]).innerHTML = "";
+                    }
+                    avgame();
+                }
+            }
+        </script>
+        <div class="row">
+            <div class="col" id="headeranim" >
+                <script>
+                    var ANIMATION_WIDTH = document.body.clientWidth;
+                    var ANIMATION_HEIGHT = 100;
+                    var BALL_RADIUS = 8;
+                    var COLORS = ["blue","red","white","green","yellow","orange","pink","#0dff31","#ff66ff","#66f2ff","#fffc4d","#3b93ff","#ff3b62","#ff963b","#3bffa0","#677deb","#b997f0"];
+                    balls = [];
+                    function startAnim() {
+                        title_text = new titletext(550,60,"Arial",50,"white","black",6);
+                        for (let i=0; i<COLORS.length; i++){
+                            adapterx = 0;
+                            adaptery = 0;
+                            xroll = Math.floor(Math.random() * 100);
+                            yroll = Math.floor(Math.random() * 100);
+                            if (xroll % 2 === 0) {
+                                adapterx = 1;
+                            } else {
+                                adapterx = -1;
+                            }
+                            if (yroll % 2 === 0) {
+                                adaptery = 1;
+                            } else {
+                                adaptery = -1;
+                            }
+                            balls.push(new ball(ANIMATION_WIDTH/2,ANIMATION_HEIGHT/2,BALL_RADIUS,COLORS[i],adapterx*(Math.floor(Math.random() * 20) + 10),adaptery*(Math.floor(Math.random() * 20) + 10)));
+                        }
+                        myGameArea.start();
+                    }
+                    var myGameArea = { 
+                        canvas : document.createElement("canvas"),
+                        start : function(){
+                            this.canvas.width = ANIMATION_WIDTH;
+                            this.canvas.height = ANIMATION_HEIGHT;
+                            this.context = this.canvas.getContext("2d");
+                            document.getElementById("headeranim").appendChild(this.canvas);
+                            this.interval = setInterval(updateGameArea, 50);
+                        },
+                        clear : function() {
+                            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                        }
+                    }
+                    function ball(x,y,radius,color,speedx,speedy){
+                        this.x = x;
+                        this.y = y;
+                        this.radius = radius;
+                        this.color = color;
+                        this.speedx = speedx;
+                        this.speedy = speedy;
+                        this.update = function () {
+                            ctx = myGameArea.context;
+                            if (this.x + this.speedx > this.radius) {
+                                if (this.x + this.speedx < ANIMATION_WIDTH - this.radius) {
+                                    this.x += this.speedx;
+                                    if (this.y + this.speedy > this.radius) {
+                                        if (this.y + this.speedy < ANIMATION_HEIGHT - this.radius) {
+                                            this.y += this.speedy;
+                                        } else {
+                                            this.y = ANIMATION_HEIGHT - this.radius;
+                                            this.speedy *= -1;
+                                        }
+                                    } else {
+                                        this.y = this.radius;
+                                        this.speedy *= -1;
+                                    }
+                                } else {
+                                    this.x = ANIMATION_WIDTH - this.radius;
+                                    this.speedx *= -1;
+                                }
+                            } else {
+                                this.x = this.radius;
+                                this.speedx *= -1;
+                            }
+                            ctx.fillStyle = this.color;
+                            ctx.beginPath();
+                            ctx.arc(this.x,this.y,this.radius,0,2*Math.PI,true);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                    }
+                    function titletext(x,y,font,size,coloro,colort,blinkspeed){
+                        this.x = x;
+                        this.y = y;
+                        this.font = font;
+                        this.size = size;
+                        this.coloro = coloro;
+                        this.colort = colort;
+                        this.blinkspeed = blinkspeed;
+                        this.blink = 0;
+                        this.update = function () {
+                            ctx = myGameArea.context;
+                            ctx.font = this.size.toString()+"px "+this.font;
+                            if (this.blink < 2*this.blinkspeed){
+                                this.blink += 1;
+                                if (this.blink < this.blinkspeed){
+                                    ctx.fillStyle = coloro;
+                                } else {
+                                    ctx.fillStyle = colort;
+                                }
+                            } else {
+                                this.blink = 0;
+                            }
+                            ctx.fillText("Mediocre Ping Pong",this.x,this.y);
+                        }
+                    }
+                    function updateGameArea() {
+                        myGameArea.clear();
+                        title_text.update();
+                        for (let j=0; j<balls.length; j++){
+                            balls[j].update();
+                        }     
+                    }
+                </script>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <a class="btn btn-dark" style="width:100%"><strong>Stats</strong></a>
+                <table class="table table-hover" style="height:90% !important;">
+                    <tbody>
+                        <tr>
+                            <th>Draws</th>
+                            <td>{{ player.draws }}</td>
+                        </tr>
+                        <tr>
+                            <th>Wins</th>
+                            <td>{{ player.total_wins }}</td>
+                        </tr>
+                        <tr>
+                            <th>Losses</th>
+                            <td>{{ player.total_losses }}</td>
+                        </tr>
+                        <tr>
+                            <th>Score</th>
+                            <td>{{ player.score }}</td>
+                        </tr>
+                        <tr>
+                            <th>Rank</th>
+                            <td>{{ player.rank }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col">
+                <a class="btn btn-dark" style="width:100%"><strong>Chat Lounge</strong></a>
+                <div style="height:200px; overflow:auto; width: 500px;">
+                <table id="chattext" class="table table-hover" style="height: 60% !important; margin:4px;"></table>
+                </div>
+                <input id="sendchat" type="text" placeholder="Send Message" class="form-control" style="width:80% !important; display: inline-block !important;"><a class="btn btn-primary" style="width: 20% !important; display: inline-block !important;" onclick="segacha()">Send</a>                
+            </div>
+            <div class="col">
+                <a class="btn btn-dark" style="width:100%"><strong>Top 10 Players</strong></a>
+                <div style="height:250px; overflow:auto;">
+                <table class="table table-hover">
+                    <tr>
+                        <th>Rank</th>
+                        <th>Username</th>
+                        <th>Score</th>
+                    </tr>
+                    {% for i in winners %}
+                    <tr>
+                        <td>{{ i.rank }}</td>
+                        <td>{{ i.userplayer.username }}</td>
+                        <td>{{ i.score }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <script>
+                function myFunction() {
+                    var input, filter, table, tr, td, i, txtValue;
+                    input = document.getElementById("myInput");
+                    filter = input.value.toUpperCase();
+                    table = document.getElementById("stable");
+                    tr = table.getElementsByTagName("tr");
+                    for (i = 0; i < tr.length; i++) {
+                        td = tr[i].getElementsByTagName("td")[1];
+                        if (td) {
+                            txtValue = td.textContent || td.innerText;
+                            if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                                tr[i].style.display = "";
+                            } else {
+                                tr[i].style.display = "none";
+                            }
+                        }       
+                    }
+                }
+            </script>
+            <div class="col">
+                <a class="btn btn-dark" style="width: 100% !important;"><strong>Game Configuration</strong></a></br></br>
+                <a class="btn btn-success" style="width : 100% !important;" onclick="creategame()">Start Default New Game</a></br></br>
+                <a class="btn btn-danger" style="width : 100% !important;" href="/yggip/modifygame/{{ player.id }}">Start Customizable New Game</a></br></br>
+                <a class="btn btn-primary" id="adherebutt" style="width : 100% !important;" href="/yggip/adhere/">Adhere To Existing Game</a></br></br>
+                <a class="btn btn-warning" style="width: 100% !important; color: white !important;" href="/yggip/uno/{{ player.id }}">Play Brick Breaker</a></br></br>
+            </div>
+            <div class="col">
+                <a class="btn btn-dark" style="width: 100%"><strong>Global Players State</strong></a>
+                <div style="height:230px; overflow:auto;">
+                <table id="stable" class="table table-hover">
+                    <tr>
+                        <th>State</th>
+                        <th>Username</th>
+                        <th><input class="form-control" type="text" placeholder="Search" id="myInput" onkeyup="myFunction()"></th>
+                    </tr>
+                    {% for jj in roomies %}
+                    <tr>
+                        <td id="state-{{ jj.id }}">
+                            {% if jj.state == 0 %}
+                            <img class="tableimage" src="{% static 'yggip/red_butt.jpg' %}" style="width: 20px !important; height: 20px !important;">
+                            {% endif %}
+                            {% if jj.state == 1 %}
+                            <img class="tableimage" src="{% static 'yggip/green_butt.jpg' %}" style="width: 20px !important; height: 20px !important;">
+                            {% endif %}
+                            {% if jj.state == 2 %}
+                            <img class="tableimage" src="{% static 'yggip/or_butt.jpg' %}" style="width: 20px !important; height: 20px !important;">
+                            {% endif %}
+                            {% if jj.state == 3 %}
+                            <img class="tableimage" src="{% static 'yggip/pr_butt.jpg' %}" style="width: 20px !important; height: 20px !important;">
+                            {% endif %}
+                        </td>
+                        <td>{{ jj.userplayer.username }}</td>
+                        <td id="skate-{{ jj.id }}">
+                            {% if jj.state == 1 %}
+                                <a class="btn btn-primary" style="width:100% !important;" onclick="invite({{ jj.id }})">Invite</a>
+                            {% endif %}
+                            {% if jj.state == 2 %}
+                                <a class="btn btn-primary" style="width:100% !important;" href="/yggip/bond/{{ jj.id }}">Adhere</a>
+                            {% endif %}
+                            {% if jj.state == 3 %}
+                                <a class="btn btn-primary" style="width:100% !important;" href="#">Watch</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {%endfor%}
+                </table>
+            </div>
+            </div>
+            <div class="col">
+                <a class="btn btn-dark" style="width: 100% !important;"><strong>Game Description</strong></a>
+                </br></br></br>
+                <p>I made this game to learn about WebSockets and because i love programming games. Feel free to use this GitHub repo for a school project or to improve the game.</p>
+                <p>Please send me your feedback at idriss.el.moussaouiti@gmail.com and let me know how i can become better, XOXO</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="row">
+                <a class="btn btn-danger" style="width:100% !important;" href="/accounts/logout">Log Out</a>
+            </div>
+        </div>
+        <script>
+            function avgame() {
+                avnum = 0;
+                av = document.getElementsByClassName("tableimage");
+                kiko = window.location.protocol+"://"+window.location.host;
+                for (let k=0; k<av.length; k++){
+                    if (av[k].src.substring(kiko.length-1) === "{% static 'yggip/or_butt.jpg' %}"){
+                        avnum++;
+                    }
+                }
+                document.getElementById("adherebutt").innerHTML = "Adhere To Existing Game (available games : "+avnum.toString()+" )";
+                return avnum;
+            }
+            var availables = avgame();
+        </script>
+    </body>
+</html>
